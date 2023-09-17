@@ -1,8 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
+import './modalStyle.css';
 import PACLogo from './images/PACLogo.jpg';
+import Modal from 'react-bootstrap/Modal';
+import Button from 'react-bootstrap/Button';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc } from 'firebase/firestore';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
 const App = () => {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -11,12 +34,44 @@ const App = () => {
   const [images, setImages] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showSignupModal, setShowSignupModal] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
 
-  const handleLogin = () => {
-    if (username === 'admin' && password === 'password') {
+  const handleShowSignupModal = () => setShowSignupModal(true);
+  const handleCloseSignupModal = () => setShowSignupModal(false);
+
+  const handleSignup = async () => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, newEmail, newPassword);
+      const user = userCredential.user;
+      handleAddUser();
+      handleCloseSignupModal();
+    } catch (error) {
+      console.error('Error signing up:', error);
+    }
+  };
+
+  const handleAddUser = async () => {
+    try {
+      const usersCollection = collection(db, 'users');
+      const docRef = await addDoc(usersCollection, {
+        name: 'John Doe',
+        email: 'john.doe@example.com'
+      });
+      console.log('Document written with ID: ', docRef.id);
+    } catch (error) {
+      console.error('Error adding document: ', error);
+    }
+  };
+
+  const handleLogin = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, username, password);
       setLoggedIn(true);
-    } else {
-      alert('Invalid username or password');
+    } catch (error) {
+      alert("Invalid login " + error);
+      console.error('Error logging in:', error);
     }
   };
 
@@ -107,6 +162,22 @@ const App = () => {
           <button className="btn btn-primary" onClick={handleLogin}>
             Login
           </button>
+          <button className="btn btn-default" onClick={handleShowSignupModal}>Sign Up</button>
+          <Modal show={showSignupModal} onHide={handleCloseSignupModal}>
+            <Modal.Header className='modal-header' closeButton>
+              <Modal.Title>Sign Up</Modal.Title>
+            </Modal.Header>
+            <Modal.Body className='modal-body'>
+              <input type='text' placeholder='Email' value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className='input-field' />
+              <input type='password' placeholder='Password' value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className='input-field' />
+            </Modal.Body>
+            <Modal.Footer className='modal-footer'>
+              <Button variant='primary' className='signup-button'>Sign Up</Button>
+            </Modal.Footer>
+          </Modal>
+        </div>
+        <div>
+          
         </div>
       </div>
     );
